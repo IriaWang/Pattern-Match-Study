@@ -1,18 +1,16 @@
-# This program reads several files, the positions and timings of the top and bottom corners for different templates.
+# This program reads several files, the positions and timings of the tooling pins for different templates.
 # It analyzes the data by making several graphs (template length or width vs standard deviation, mean, time, efficiency).
 
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
 
-# A "unit" is a bridge between the formatting of top/bottom files and the dictionaries wanted for each corner
-
-
+# A "unit" is a bridge between the formatting of the files and the dictionaries wanted for each tooling pin
 class unit:
 
-    # Reads CSV into a 2D array, and separates the coordinates into arrays for the right and left corners
-    # self.right_coords
-    # self.left_coords
+    # Reads CSV into a 2D array, and separates the coordinates into a list of arrays, one array for
+    # each tooling pin
+    # self.raw_data
     def __init__(self, filename):
         data = np.genfromtxt(filename, dtype=float, delimiter=",")
         self.raw_data = [data[::5], data[1::5], data[2::5], data[3::5], data[4::5]]
@@ -23,22 +21,21 @@ class unit:
 class corner_data:
 
     # Create dictionaries for each corner (position and time), and the expected positions
-    # self.A, self.B, self.C, self.D
-    # self.A_time, self.B_time, self.C_time, self.D_time
-    # self.expected
-    # Parameters: expected_values_file (file containing expected positions for each corner)
+    # self.right, self.left
+    # self.right_time, self.right_time
+    # self.right_expected, self.left_expected
+    # Parameters: R_expected_values_file (file containing expected positions right tooling pins)
+    #               L_expected_values_file (file containing expected positions left tooling pins)
     def __init__(self, R_expected_values_file, L_expected_values_file):
-        self.right = [{}, {}, {}, {}, {}]
-        self.right_time = [{}, {}, {}, {}, {}]
-        self.left = [{}, {}, {}, {}, {}]
-        self.left_time = [{}, {}, {}, {}, {}]
+        self.right, self.left = [{}, {}, {}, {}, {}], [{}, {}, {}, {}, {}]
+        self.right_time, self.left_time = [{}, {}, {}, {}, {}], [{}, {}, {}, {}, {}]
         self.right_expected = np.genfromtxt(R_expected_values_file, dtype=float, delimiter=",")
         self.left_expected = np.genfromtxt(L_expected_values_file, dtype=float, delimiter=",")
 
 
     # Adds data to the dictionaries, based on the given unit
     # Parameters: data (unit containing position data), data_time (unit containing time data), template_name
-    #           (dimentions of the template in px), template_type (top or bottom)
+    #           (dimensions of the template in px), right_left (right or left tooling pins)
     def add_data(self, data: unit, data_time: unit, template_name, right_left):
         if right_left == "right":
             for i in range(len(self.right)):
@@ -50,25 +47,25 @@ class corner_data:
                 self.left_time[i][template_name] = data_time.raw_data[i]
 
     # Graph standard deviation over length or width
-    # Parameters: dimension (length or width), coordinate (standard deviation in x or y), mark (Fiducial mark)
+    # Parameters: dimension (length or width), coordinate (standard deviation in x or y?)
     def scatter_std_vs_size(self, dimension, coordinate):
         x = []
         y_right, y_left = [[],[],[],[],[]], [[],[],[],[],[]]
         
-        for key in self.right[0]:
+        for key in self.right[0]: # iterate over template
             if dimension == "Length":
                 x.append(int(key.split("x")[1]))
             else:
                 x.append(int(key.split("x")[0]))
                 
         if coordinate == "x":
-            for i in range(len(self.right)):
-                for key in self.right[i]:
+            for i in range(len(self.right)): # iterate over tooling pin
+                for key in self.right[i]: # iterate over template
                     y_right[i].append(np.std(self.right[i][key][:,0]) * 1000)
                     y_left[i].append(np.std(self.left[i][key][:,0]) * 1000)
         else:
-            for i in range(len(self.right)):
-                for key in self.right[i]:
+            for i in range(len(self.right)): # iterate over tooling pin
+                for key in self.right[i]: # iterate over template
                     y_right[i].append(np.std(self.right[i][key][:,1]) * 1000)
                     y_left[i].append(np.std(self.left[i][key][:,1]) * 1000)
                     
@@ -86,28 +83,28 @@ class corner_data:
                   dimension)
         plt.xlabel(dimension + " of Template (px)")
         plt.ylabel("Standard Deviation in " + coordinate + " (um)")
-        plt.legend((R0, R1, R2, R3, R4, L0, L1, L2, L3, L4), ("R0", "R1", "R2", "R3", "R4", "L0", "L1", "L2", "L3", "L4"))
-        #plt.axvline(x = 35)
+        plt.legend((R0, R1, R2, R3, R4, L0, L1, L2, L3, L4), 
+                   ("R0", "R1", "R2", "R3", "R4", "L0", "L1", "L2", "L3", "L4"))
+        #plt.axvline(x = 35) # Command to draw a vertical line through the graph
         #plt.axvline(x = 110)
-        
-        plt.ylim(0,5)
+        #plt.ylim(0,5) # Command to limit the boundaries of the y axis
         plt.show()
 
     # Graph mean over length or width
-    # Parameters: dimension (size varies in width or length?), coordinate (std or x or y coordinate?), mark (Fiducial Mark)
+    # Parameters: dimension (size varies in width or length?), coordinate (std or x or y coordinate?)
     def scatter_mean_vs_size(self, dimension, coordinate):
         x = []
         y_right, y_left = [[],[],[],[],[]], [[],[],[],[],[]]
         
-        for key in self.right[0]:
+        for key in self.right[0]: # interate over template
             if dimension == "Length":
                 x.append(int(key.split("x")[1]))
             else:
                 x.append(int(key.split("x")[0]))
                 
         if coordinate == "x":
-            for i in range(len(self.right)):
-                for key in self.right[i]:
+            for i in range(len(self.right)): # iterate over tooling pin
+                for key in self.right[i]: # iterate over template
                     y_right[i].append(np.mean(self.right[i][key][:,0]) * 1000)
                     y_left[i].append(np.mean(self.left[i][key][:,0]) * 1000)
         else:
@@ -130,29 +127,30 @@ class corner_data:
                   dimension)
         plt.xlabel(dimension + " of Template (px)")
         plt.ylabel("Mean in " + coordinate + " (um)")
-        plt.legend((R0, R1, R2, R3, R4, L0, L1, L2, L3, L4), ("R0", "R1", "R2", "R3", "R4", "L0", "L1", "L2", "L3", "L4"))
-        #plt.axvline(x = 35)
+        plt.legend((R0, R1, R2, R3, R4, L0, L1, L2, L3, L4), 
+                   ("R0", "R1", "R2", "R3", "R4", "L0", "L1", "L2", "L3", "L4"))
+        #plt.axvline(x = 35) # Command to draw a vertical line through the graph
         #plt.axvline(x = 110)
-        #plt.ylim(-49250,-48500)
+        #plt.ylim(-49250,-48500) # Command to limit the boundaries of the y axis
         plt.show()
 
     # Graph time over length or width
-    # Parameters: dimension (length or width), mark (Fiducial Mark)
+    # Parameters: dimension (length or width)
     def scatter_time_vs_size(self, dimension):
         x = []
         y_right, y_left = [[],[],[],[],[]], [[],[],[],[],[]]
         
-        for key in self.right[0]:
+        # Fill x
+        for key in self.right[0]: # iterate over templates
             if dimension == "Length":
                 x.append(int(key.split("x")[1]))
             else:
                 x.append(int(key.split("x")[0]))
                 
-
-        for i in range(len(self.right)):
-            for key in self.right[i]:
+        # Fill y
+        for i in range(len(self.right)): # iterate over tooling pins
+            for key in self.right[i]: # iterate over templates
                 y_right[i].append(np.mean(self.right_time[i][key]))
-                #print(self.right_time[i][key])
                 y_left[i].append(np.mean(self.left_time[i][key]))
                     
         R0 = plt.scatter(x, y_right[0])
@@ -169,14 +167,14 @@ class corner_data:
         plt.xlabel(dimension + " of Template (px)")
         plt.ylabel("Time (ms)")
         plt.legend((R0, R1, R2, R3, R4, L0, L1, L2, L3, L4), ("R0", "R1", "R2", "R3", "R4", "L0", "L1", "L2", "L3", "L4"))
-        #plt.ylim(0, 100)
+        #plt.ylim(0, 100) # Command to draw a vertical line through the graph
         #plt.axvline(x=26)
-        #plt.axvline(x=1336)
+        #plt.axvline(x=1336) # Command to limit the boundaries of the y axis
         plt.show()
 
     # Graph efficiency (defined as the fraction of data points that are close to the
     #           expected position and are under a certain time) over length or width
-    # Parameters: dimension (length or width), mark (Fiducial Mark)
+    # Parameters: dimension (length or width)
     def scatter_efficiency_vs_size(self, dimension):
         x = []
         y_right, y_left = [[],[],[],[],[]], [[],[],[],[],[]]
@@ -191,8 +189,8 @@ class corner_data:
                 
         time_cut = 700000000  # cut-off for how long it took to pattern match
         # cut-off for how far the pattern match is from expected (mm)
-        position_cut = .05
-        for j in range(len(self.left)):
+        position_cut = .02
+        for j in range(len(self.left)): # iterate over tooling pins
             for key in self.left[j]:  # iterate over the tempalates
                 for i in range(len(self.left[j][key])):  # iterate over the data points
                     if abs(self.right[j][key][i, 0] - self.right_expected[j, 0]) < position_cut and abs(self.right[j][key][i, 1] - self.right_expected[j, 1]) < position_cut and self.right_time[j][key][i] < time_cut:
@@ -217,9 +215,10 @@ class corner_data:
                   dimension)
         plt.xlabel(dimension + " of the Template (px)")
         plt.ylabel("Efficiency")
+        #plt.legend((R4),("R4"))
         plt.legend((R0, R1, R2, R3, R4, L0, L1, L2, L3, L4), ("R0", "R1", "R2", "R3", "R4", "L0", "L1", "L2", "L3", "L4"))
-        # plt.ylim(.8,1.1)
-        #plt.axvline(x=24)
+        # plt.ylim(.8,1.1) # Command to limit the boundaries of the y axis
+        #plt.axvline(x=24) # Command to draw a vertical line through the graph
         #plt.axvline(x=40)
         plt.show()
 
